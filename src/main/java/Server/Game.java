@@ -2,7 +2,7 @@ package Server;
 
 public class Game {
     public enum TrumpColour{
-        Diamond,
-
+        DIAMONDS, HEARTS, CLUBS, SPADES,
     }
+
 }
