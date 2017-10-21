@@ -7,4 +7,5 @@ public class Player {
     Channel channel;
     int team_id;
     //cards
+
 }

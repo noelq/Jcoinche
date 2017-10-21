@@ -10,6 +10,11 @@ import io.netty.channel.socket.SocketChannel;
 
 public class ServerInitializer extends ChannelInitializer<SocketChannel>{
 
+    private Server server;
+
+    public ServerInitializer(Server server){
+        this.server = server;
+    }
 
     protected void initChannel(SocketChannel arg0) throws Exception{
         ChannelPipeline pipeline = arg0.pipeline();

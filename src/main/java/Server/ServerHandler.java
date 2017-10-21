@@ -6,21 +6,26 @@ import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 
+import java.util.ArrayList;
+
+import Server.Server;
 import static Server.ServerHandler.SERVER_STATE.START;
 import static Server.ServerHandler.SERVER_STATE.WAIT;
-import static Server.ServerHandler.SERVER_STATE.GAME;
+
 
 public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
     private static final ChannelGroup channels = new DefaultChannelGroup();
-    private int player_cpt = 0;
+
+
     public enum SERVER_STATE{
-      WAIT, START, GAME,
+        WAIT, START, GAME,
     }
-    SERVER_STATE server_state;
+    private SERVER_STATE server_state;
+    private static int player_cpt = 0;
 
-    public ServerHandler(){
+    public ServerHandler() {
+        //player_cpt = 0;
         server_state = WAIT;
-
     }
 
     @Override
@@ -30,9 +35,13 @@ public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
             channel.write(" [SERVER] - " + incoming.remoteAddress() + "has joined!\n");
         }
         channels.add(ctx.channel());
+        System.out.println(player_cpt);
+        //setPlayer_cpt(getPlayer_cpt() + 1);
         player_cpt += 1;
         if (player_cpt == 4) {
+            System.out.println("4 CLIENTS");
             server_state = START;
+            new Game(channels);
         }
     }
 
@@ -43,7 +52,7 @@ public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
             channel.write(" [SERVER] - " + incoming.remoteAddress() + "has left!\n");
         }
         channels.remove(ctx.channel());
-        player_cpt -= 1;
+        //player_cpt -= 1;
 
     }
 
@@ -57,4 +66,5 @@ public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
         }
 
     }
+
 }
