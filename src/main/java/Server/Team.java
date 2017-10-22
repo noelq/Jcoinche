@@ -14,7 +14,7 @@ public class Team {
 
     public void addPlayer(Player player) {
         players.add(player);
-        nbPlayers -= 1;
+        nbPlayers += 1;
     }
 
     public void addScore(int scoreToAdd){

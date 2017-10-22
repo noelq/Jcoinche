@@ -6,6 +6,7 @@ import io.netty.channel.group.ChannelGroup;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 public class Game {
     public enum TRUMP_COLOUR{
@@ -20,7 +21,9 @@ public class Game {
         for (int i = 0; i < nbTeams; i++){
             teams[i] = new Team();
         }
+        System.out.println("je suis passé");
         this.setDeck();
+
         /*for (int i = 0; i < 2; i++){
             System.out.println(teams[i].getPlayer(0).getId());
             System.out.println(teams[i].getPlayer(0).getTeam_id());
@@ -31,6 +34,8 @@ public class Game {
 
     public void start(){
         System.out.println("La on start la game");
+        this.distribution();
+        System.out.println(teams[0].getPlayer(0).getCards().get(0).getDisplay_string() + teams[0].getPlayer(0).getCards().get(0).getColour());
     }
 
     public void setDeck() {
@@ -40,7 +45,7 @@ public class Game {
                 Deck.add(new Card(cards_name[j], Card.COLOUR.values()[i], 7 + j));
             }
         }
-        Collections.shuffle(Deck);
+    //    Collections.shuffle(Deck);
         for (int k = 0; k < 32; k++){
             System.out.print(Deck.get(k).getValue());
             System.out.print(Deck.get(k).getColour());
@@ -59,5 +64,24 @@ public class Game {
 
     public Team getTeam(int idx){
         return (teams[idx]);
+    }
+
+    public void distribution() {
+        List<Player> my_players = getPlayers();
+        for (int i = 0; i < 4; i++) {
+            List<Card> cards = new ArrayList<Card>();
+            for (int j = 0; j < 8; j++) {
+                my_players.get(i).addCard(Deck.get(j + (j * i)));
+            }
+        }
+    }
+
+    public List<Player> getPlayers(){
+        List<Player> players =  new ArrayList<Player>();
+        for (int i = 0; i < 2; i++){
+            players.add(teams[i].getPlayer(0));
+            players.add(teams[i].getPlayer(1));
+        }
+        return players;
     }
 }

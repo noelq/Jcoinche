@@ -3,6 +3,7 @@ package Server;
 import io.netty.channel.Channel;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class Player {
@@ -34,5 +35,22 @@ public class Player {
 
     public int getTeam_id() {
         return team_id;
+    }
+
+    public List<Card> getCards() {
+        return cards;
+    }
+
+    public void addCard(Card card) {
+        this.cards.add(card);
+    }
+
+    public void removeCard(int value, Card.COLOUR colour){
+        for (Iterator<Card> iter = cards.listIterator();  iter.hasNext();){
+            Card card = iter.next();
+            if (card.getColour() == colour && card.getValue() == value){
+                iter.remove();
+            }
+        }
     }
 }
