@@ -5,6 +5,7 @@ import io.netty.channel.group.ChannelGroup;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 
 public class Game {
     public enum TRUMP_COLOUR{
@@ -13,10 +14,14 @@ public class Game {
     public ArrayList<Card> Deck = new ArrayList<Card>();
     public String[] cards_name = {"7", "8", "9", "10","J", "Q", "K", "A"};
 
-    public Game(ChannelGroup channels){
-        //for (Channel channel : channels){
+    public Game(Team[] teams){
         this.setDeck();
-        //}
+        for (int i = 0; i < 2; i++){
+            System.out.println(teams[i].getPlayer(0).getId());
+            System.out.println(teams[i].getPlayer(0).getTeam_id());
+            System.out.println(teams[i].getPlayer(1).getId());
+            System.out.println(teams[i].getPlayer(1).getTeam_id());
+        }
     }
 
     public void setDeck() {

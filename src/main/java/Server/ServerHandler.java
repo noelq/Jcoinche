@@ -7,8 +7,8 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 
 import java.util.ArrayList;
+import java.util.List;
 
-import Server.Server;
 import static Server.ServerHandler.SERVER_STATE.START;
 import static Server.ServerHandler.SERVER_STATE.WAIT;
 
@@ -22,6 +22,7 @@ public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
     }
     private SERVER_STATE server_state;
     private static int player_cpt = 0;
+    public Team[] teams = new Team[2];
 
     public ServerHandler() {
         //player_cpt = 0;
@@ -35,13 +36,18 @@ public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
             for (Channel channel : channels) {
                 channel.write(" [SERVER] - " + incoming.remoteAddress() + "has joined!\n");
             }
+            Player player_tmp = new Player();
+            player_tmp.setChannel(incoming);
+            player_tmp.setId(player_cpt + 1);
+            player_tmp.setTeam_id(player_cpt % 2);
+            teams[player_cpt % 2].addPlayer(player_tmp);
             channels.add(ctx.channel());
             player_cpt += 1;
         }
         else{
             System.out.println("4 CLIENTS");
             server_state = START;
-            new Game(channels);
+            new Game(teams);
 
         }
     }
