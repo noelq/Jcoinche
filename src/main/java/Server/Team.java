@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Team {
-    private int score;
+    private int score = 0;
     public List<Player> players = new ArrayList<Player>();
 
     public Player getPlayer(int idx){
