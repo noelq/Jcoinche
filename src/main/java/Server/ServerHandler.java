@@ -73,11 +73,18 @@ public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
 
     public void messageReceived(ChannelHandlerContext arg0, String message) throws Exception{
         Channel incoming = arg0.channel();
-        for (Channel channel: channels) {
+
+        if (game.getCurrentPlayerId() != 0 && game.getPlayerById(game.getCurrentPlayerId()).getChannel() == incoming){
+            game.scanMsg(message);
+        }
+        else {
+            incoming.write("It is not your turn\n");
+        }
+        /*for (Channel channel: channels) {
             if (channel != incoming){
                 channel.write("[" + incoming.remoteAddress() + "]" + message + "\n");
             }
-        }
+        }*/
 
     }
 
