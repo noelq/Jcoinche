@@ -31,19 +31,22 @@ public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         Channel incoming = ctx.channel();
-        for (Channel channel : channels) {
-            channel.write(" [SERVER] - " + incoming.remoteAddress() + "has joined!\n");
+        if (player_cpt != 4){
+            for (Channel channel : channels) {
+                channel.write(" [SERVER] - " + incoming.remoteAddress() + "has joined!\n");
+            }
+            channels.add(ctx.channel());
+            player_cpt += 1;
         }
-        channels.add(ctx.channel());
-        System.out.println(player_cpt);
-        //setPlayer_cpt(getPlayer_cpt() + 1);
-        player_cpt += 1;
-        if (player_cpt == 4) {
+        else{
             System.out.println("4 CLIENTS");
             server_state = START;
             new Game(channels);
+
         }
     }
+
+
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception{
