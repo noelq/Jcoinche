@@ -9,16 +9,12 @@ import io.netty.channel.group.DefaultChannelGroup;
 import java.util.ArrayList;
 import java.util.List;
 
-import static Server.ServerHandler.SERVER_STATE.START;
-import static Server.ServerHandler.SERVER_STATE.WAIT;
-
-
 public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
     private static final ChannelGroup channels = new DefaultChannelGroup();
     private static Game game;
 
     public enum SERVER_STATE{
-        WAIT, START, GAME,
+        WAIT, GAME,
     }
     private SERVER_STATE server_state;
     private static int player_cpt = 0;
@@ -26,7 +22,7 @@ public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
 
     public ServerHandler() {
         //player_cpt = 0;
-        server_state = WAIT;
+        server_state = SERVER_STATE.WAIT;
     }
 
     @Override
@@ -47,13 +43,14 @@ public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
             game.addPlayer(player_tmp);
             channels.add(ctx.channel());
             player_cpt += 1;
-            if (player_cpt == 4){
+            if (player_cpt == 4) {
                 game.start();
+                server_state = SERVER_STATE.GAME;
             }
         }
-        else{
-            System.out.println("4 CLIENTS");
-            server_state = START;
+        if (server_state == SERVER_STATE.GAME){
+            System.out.println("New client waiting");
+            incoming.write(" [SERVER] - Game in progress, please wait\n");
         }
     }
 
@@ -74,11 +71,11 @@ public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
     public void messageReceived(ChannelHandlerContext arg0, String message) throws Exception{
         Channel incoming = arg0.channel();
 
-        if (game.getCurrentPlayerId() != 0 && game.getPlayerById(game.getCurrentPlayerId()).getChannel() == incoming){
+        if (game.getWait().ordinal() >= 0 && game.getCurrentPlayerId() != 0 && game.getPlayerById(game.getCurrentPlayerId()).getChannel() == incoming){
             game.scanMsg(message);
         }
         else {
-            incoming.write("It is not your turn\n");
+            incoming.write("It is player " + game.getCurrentPlayerId() + "'s turn\n");
         }
         /*for (Channel channel: channels) {
             if (channel != incoming){
