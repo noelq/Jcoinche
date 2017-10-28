@@ -1,13 +1,13 @@
 package Client;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.SimpleChannelInboundHandler;
 
-public class ClientHandler extends ChannelInboundMessageHandlerAdapter<String>{
+public class ClientHandler extends SimpleChannelInboundHandler<String> {
 
 
-    public void messageReceived(ChannelHandlerContext arg0, String arg1) throws  Exception{
+    public void channelRead0(ChannelHandlerContext arg0, String arg1) throws  Exception{
         System.out.println(arg1);
-
     }
 }

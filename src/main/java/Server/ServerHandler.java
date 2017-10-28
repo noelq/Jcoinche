@@ -2,15 +2,16 @@ package Server;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.util.concurrent.GlobalEventExecutor;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
-    private static final ChannelGroup channels = new DefaultChannelGroup();
+public class ServerHandler extends SimpleChannelInboundHandler<String> {
+    private static final ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     private static Game game;
 
     public enum SERVER_STATE{
@@ -18,7 +19,6 @@ public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
     }
     private SERVER_STATE server_state;
     private static int player_cpt = 0;
-    public Team[] teams = new Team[2];
 
     public ServerHandler() {
         //player_cpt = 0;
@@ -31,9 +31,13 @@ public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
         if (player_cpt == 0){
             game = new Game();
         }
+        if (server_state == SERVER_STATE.GAME){
+            System.out.println("New client waiting");
+            incoming.writeAndFlush(" [SERVER] - Game in progress, please wait\n");
+        }
         if (player_cpt != 4){
             for (Channel channel : channels) {
-                channel.write(" [SERVER] - " + incoming.remoteAddress() + "has joined!\n");
+                channel.writeAndFlush(" [SERVER] - " + incoming.remoteAddress() + "has joined!\n");
             }
             Player player_tmp = new Player();
             player_tmp.setChannel(incoming);
@@ -48,10 +52,6 @@ public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
                 server_state = SERVER_STATE.GAME;
             }
         }
-        if (server_state == SERVER_STATE.GAME){
-            System.out.println("New client waiting");
-            incoming.write(" [SERVER] - Game in progress, please wait\n");
-        }
     }
 
 
@@ -60,7 +60,7 @@ public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception{
         Channel incoming = ctx.channel();
         for (Channel channel : channels) {
-            channel.write(" [SERVER] - " + incoming.remoteAddress() + "has left!\n");
+            channel.writeAndFlush(" [SERVER] - " + incoming.remoteAddress() + "has left!\n");
         }
         channels.remove(ctx.channel());
         //player_cpt -= 1;
@@ -68,18 +68,19 @@ public class ServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
     }
 
 
-    public void messageReceived(ChannelHandlerContext arg0, String message) throws Exception{
+    public void channelRead0(ChannelHandlerContext arg0, String message) throws Exception{
         Channel incoming = arg0.channel();
+        System.out.println("on m'appelle");
 
-        if (game.getWait().ordinal() >= 0 && game.getCurrentPlayerId() != 0 && game.getPlayerById(game.getCurrentPlayerId()).getChannel() == incoming){
+        if (game.getWait().ordinal() >= 0 && game.getCurrentPlayer().getChannel() == incoming){
             game.scanMsg(message);
         }
         else {
-            incoming.write("It is player " + game.getCurrentPlayerId() + "'s turn\n");
+            incoming.writeAndFlush("It is player " + game.getCurrentPlayer().getId() + "'s turn\n");
         }
         /*for (Channel channel: channels) {
             if (channel != incoming){
-                channel.write("[" + incoming.remoteAddress() + "]" + message + "\n");
+                channel.writeAndFlush("[" + incoming.remoteAddress() + "]" + message + "\n");
             }
         }*/
 

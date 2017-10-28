@@ -45,12 +45,20 @@ public class Player {
         this.cards.add(card);
     }
 
-    public void removeCard(int value, Card.COLOUR colour){
-        for (Iterator<Card> iter = cards.listIterator();  iter.hasNext();){
-            Card card = iter.next();
-            if (card.getColour() == colour && card.getValue() == value){
-                iter.remove();
+    public void sendMsg(String msg){
+        channel.writeAndFlush(msg + "\n");
+    }
+
+    public Card playCard(String cardName){
+        Card tmpCard;
+
+        for (Card card : cards){
+            if (card.getDisplay_string().equals(cardName)){
+                tmpCard = card;
+                cards.remove(card);
+                return (tmpCard);
             }
         }
+        return (null);
     }
 }

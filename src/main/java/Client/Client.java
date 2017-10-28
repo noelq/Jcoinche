@@ -36,7 +36,7 @@ public class Client {
             BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 
             while (true){
-                channel.write(in.readLine() + "\r\n");
+                channel.writeAndFlush(in.readLine() + "\n");
             }
         } catch (InterruptedException e) {
             e.printStackTrace();

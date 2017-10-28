@@ -19,18 +19,24 @@ public class Game {
     public enum TRUMP_COLOUR{
         DIAMONDS, HEARTS, CLUBS, SPADES,
     }
+
+    private Board board;
     private String[] cards_name = {"7", "8", "9", "10","J", "Q", "K", "A"};
     private List<Card> Deck = new ArrayList<Card>();
+
     private int callValue = -1;
+    private TRUMP_COLOUR callColor;
+    private int passStack = 0;
 
     private Team[] teams = new Team[2];
-    //private Player players = new players[4];
+    private List<Player> players = new ArrayList<Player>();
 
-    private int currentPlayerId = 0;
-    private int firstPlayer = 1;
-    private int nbPlayers = 0;
+    private int currentPlayerIdx = 0;
+    private int turnState = 1;
+    private int nbCycle = 0;
+    private int firstPlayerIdx = 0;
+
     private WAIT_FOR wait = WAIT_FOR.NOTHING;
-    private boolean msgAnswered;
 
     public Game(){
         for (int i = 0; i < 2; i++){
@@ -38,6 +44,7 @@ public class Game {
         }
         System.out.println("je suis passé");
         this.setDeck();
+        players = getPlayers();
 
         /*for (int i = 0; i < 2; i++){
             System.out.println(teams[i].getPlayer(0).getId());
@@ -47,36 +54,19 @@ public class Game {
         }*/
     }
 
-    public void start(){
+    public void start() {
         System.out.println("La on start la game");
-        List<Player> players = new ArrayList<Player>();
-        players = getPlayers();
 
-        while (teams[0].getScore() < 2000 && teams[1].getScore() < 2000){
-            this.distribution();
-            this.calls();
-            /*while (){
-
-            }*/
-        }
-//        System.out.println(teams[0].getPlayer(0).getCards().get(0).getDisplay_string() + teams[0].getPlayer(0).getCards().get(0).getColour());
+        board = new Board();
+        this.distribution();
+        this.askPlayerToCall(getCurrentPlayer());
     }
 
-    public void calls(){
-        List<Player> players =  new ArrayList<Player>();
-        players = getPlayers();
-        for (int i = 0; i < 4; i++){
-            players.get(i).getChannel().write("It is your turn to make a call");
-            System.out.println("je lui ai écrit");
-            players.get(i).getChannel().flush();
-            msgAnswered = false;
-            wait = WAIT_FOR.CALL;
-            currentPlayerId = players.get(i).getId();
-            while (msgAnswered == false)
-                players.get(i).getChannel().flush();
-            currentPlayerId = 0;
-            wait = WAIT_FOR.NOTHING;
-        }
+    public void askPlayerToCall(Player player){
+        player.sendMsg("It is your turn to make a call");
+        System.out.println("je lui ai écrit");
+        wait = WAIT_FOR.CALL;
+        System.out.println("j'attend son call");
     }
 
     public void setDeck() {
@@ -104,24 +94,96 @@ public class Game {
         }
     }
 
-    public void scanMsg(String msg){
+    public void validateTurn(){
+        firstPlayerIdx++;
+        if (firstPlayerIdx == 4)
+            firstPlayerIdx = 0;
+        currentPlayerIdx = firstPlayerIdx;
+
+    }
+
+    public void scanMsg(String msg) {
         System.out.println("Le bon joueur me parle");
-        int nb;
-        if (wait == WAIT_FOR.CALL){
-            if (msg == "capot"){
-                System.out.println("on verra pls tard");
-            }
-            else if (isNumber(msg) && (nb = Integer.parseInt(msg)) % 10 == 0 && nb >= 80 && nb <= 160 && nb >= callValue) {
-                callValue = Integer.parseInt(msg);
-                getPlayerById(getCurrentPlayerId()).getChannel().write("Call accepted");
-                groupMsg("Player " + getCurrentPlayerId() + " called " + callValue + "\n");
-                msgAnswered = true;
-            }
-            else{
-                System.out.println("Wrong call");
-                getPlayerById(getCurrentPlayerId()).getChannel().write("Wrong call, try again");
+        if (wait == WAIT_FOR.CALL) {
+            scanCall(msg);
+        }
+        else if (wait == WAIT_FOR.CARD){
+            scanCard(msg);
+        }
+    }
+
+    public void scanCard(String msg){
+        Player player = getCurrentPlayer();
+        Card cardToplay;
+
+        if ((cardToplay = player.playCard(msg)) == null) {
+            player.sendMsg("You don't have this card or you used the wrong format");
+            return;
+        }
+        if (!isCardPlayable(cardToplay, player.getCards())){
+            player.sendMsg("You can't play this card");
+            return ;
+        }
+        if (!board.putCard(cardToplay, player)){
+            player.sendMsg("You can't play this card");
+            return ;
+        }
+        groupMsg("Player " + player.getId() + " played " + cardToplay.getDisplay_string());
+        if (turnState < 4)
+            nextPlayer();
+        else
+            validateTurn();
+    }
+
+    private boolean isCardPlayable(Card cardToPlay, List<Card> cards){
+        if (cardToPlay.getValue() > board.getMasterCard().getValue())
+        return true;
+    }
+
+    public void scanCall(String msg) {
+        String tokens[] = msg.split(" ");
+
+        if (tokens[0].equals("pass")){
+            passStack++;
+            groupMsg("Player " + getCurrentPlayer().getId();
+            if (passStack == 3){
+                nextPlayer();
+                getCurrentPlayer();
             }
         }
+        if (checkCall(tokens[0]) && checkColor(tokens[1])) {
+            getCurrentPlayer().sendMsg("Call accepted");
+            groupMsg("Player " + getCurrentPlayer().getId() + " called " + callValue + " " + callColor);
+        }
+    }
+
+    public boolean checkCall(String str){
+        int tmpCall;
+
+        if (isNumber(str) && (tmpCall = Integer.parseInt(str)) % 10 == 0 && tmpCall >= 80 && tmpCall <= 160 && tmpCall >= callValue) {
+            passStack = 0;
+            callValue = Integer.parseInt(str);
+            return true;
+        }
+        else{
+            System.out.println("Wrong call");
+            getCurrentPlayer().sendMsg("Wrong call, try again");
+            return false;
+        }
+    }
+
+    public boolean checkCallColor(String str){
+        if (str.equals("H"))
+            callColor = TRUMP_COLOUR.HEARTS;
+        else if (str.equals("D"))
+            callColor = TRUMP_COLOUR.DIAMONDS;
+        else if (str.equals("S"))
+            callColor = TRUMP_COLOUR.SPADES;
+        else if (str.equals("C"))
+            callColor = TRUMP_COLOUR.CLUBS;
+        else
+            return false;
+        return true;
     }
 
     public static boolean isNumber(String input){
@@ -138,17 +200,17 @@ public class Game {
         return (teams[idx]);
     }
 
-    public void setMsgAnswered(boolean msgAnswered){
+    /*public void setMsgAnswered(boolean msgAnswered){
         this.msgAnswered = msgAnswered;
-    }
+    }*/
 
     public WAIT_FOR getWait() {
         return wait;
     }
 
-    public int getCurrentPlayerId(){
+    /*public int getCurrentPlayerId(){
         return (currentPlayerId);
-    }
+    }*/
 
     public Player getPlayerById(int id) {
         for (int i = 0; i < 2; i++) {
@@ -181,7 +243,19 @@ public class Game {
 
     public void groupMsg(String msg){
         for (Player player: getPlayers()) {
-            player.getChannel().write(msg);
+            player.getChannel().writeAndFlush(msg + "\n");
+        }
+    }
+
+    public Player getCurrentPlayer(){
+        return (players.get(currentPlayerIdx));
+    }
+
+    public void nextPlayer() {
+        currentPlayerIdx++;
+        if (currentPlayerIdx == 4){
+            currentPlayerIdx = 0;
+            nbCycle++;
         }
     }
 }
