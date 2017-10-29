@@ -16,16 +16,12 @@ public class Game {
         NOTHING, CALL, CARD
     }
 
-    public enum TRUMP_COLOUR{
-        DIAMONDS, HEARTS, CLUBS, SPADES,
-    }
-
     private Board board;
     private String[] cards_name = {"7", "8", "9", "10","J", "Q", "K", "A"};
     private List<Card> Deck = new ArrayList<Card>();
 
     private int callValue = -1;
-    private TRUMP_COLOUR callColor;
+    private Card.COLOUR callColor;
     private int passStack = 0;
 
     private Team[] teams = new Team[2];
@@ -44,7 +40,6 @@ public class Game {
         }
         System.out.println("je suis passé");
         this.setDeck();
-        players = getPlayers();
 
         /*for (int i = 0; i < 2; i++){
             System.out.println(teams[i].getPlayer(0).getId());
@@ -56,9 +51,15 @@ public class Game {
 
     public void start() {
         System.out.println("La on start la game");
+        players = getPlayers();
 
         board = new Board();
         this.distribution();
+        players.get(0).showCards();
+        players.get(1).showCards();
+        players.get(2).showCards();
+        players.get(3).showCards();
+        System.out.println("on va ask au player");
         this.askPlayerToCall(getCurrentPlayer());
     }
 
@@ -69,11 +70,16 @@ public class Game {
         System.out.println("j'attend son call");
     }
 
+    public void askPlayerToPlay(Player player){
+        player.sendMsg("It is your turn to play");
+        wait = WAIT_FOR.CARD;
+    }
+
     public void setDeck() {
         for (int i = 0; i < 4; i++){
             for (int j = 0; j < 8; j++){
                 //tmp_card = new Card(cards_name[j], Card.COLOUR.values()[i], 7 + j);
-                Deck.add(new Card(cards_name[j], Card.COLOUR.values()[i], 7 + j));
+                Deck.add(new Card(cards_name[j] + Card.COLOUR.values()[i].toString().charAt(0), Card.COLOUR.values()[i], 7 + j));
             }
         }
         Collections.shuffle(Deck);
@@ -104,11 +110,25 @@ public class Game {
 
     public void scanMsg(String msg) {
         System.out.println("Le bon joueur me parle");
+        System.out.println(msg);
         if (wait == WAIT_FOR.CALL) {
             scanCall(msg);
         }
         else if (wait == WAIT_FOR.CARD){
-            scanCard(msg);
+            if (msg.equals("SHOW")) {
+                getCurrentPlayer().showCards();
+                return;
+            }
+            if (!board.putCard(msg, getCurrentPlayer())){
+                getCurrentPlayer().sendMsg("can't play this card");
+                return ;
+            }
+
+            groupMsg("Player " + getCurrentPlayer().getId() + " played " + msg);
+            nextPlayer();
+            askPlayerToPlay(getCurrentPlayer());
+
+           // scanCard(msg);
         }
     }
 
@@ -120,14 +140,14 @@ public class Game {
             player.sendMsg("You don't have this card or you used the wrong format");
             return;
         }
-        if (!isCardPlayable(cardToplay, player.getCards())){
+        if (!isCardPlayable(cardToplay, player.getCards())){ //check couleur
             player.sendMsg("You can't play this card");
             return ;
         }
-        if (!board.putCard(cardToplay, player)){
+       /* if (!board.putCard(cardToplay, player)){
             player.sendMsg("You can't play this card");
             return ;
-        }
+        }*/
         groupMsg("Player " + player.getId() + " played " + cardToplay.getDisplay_string());
         if (turnState < 4)
             nextPlayer();
@@ -136,8 +156,10 @@ public class Game {
     }
 
     private boolean isCardPlayable(Card cardToPlay, List<Card> cards){
-        if (cardToPlay.getValue() > board.getMasterCard().getValue())
-        return true;
+        if (cardToPlay.getValue() > board.getMasterCard().getValue()) {
+            return true;
+        }
+        return false;
     }
 
     public void scanCall(String msg) {
@@ -145,15 +167,31 @@ public class Game {
 
         if (tokens[0].equals("pass")){
             passStack++;
-            groupMsg("Player " + getCurrentPlayer().getId();
+            groupMsg("Player " + getCurrentPlayer().getId() + " passed");
+            nextPlayer();
             if (passStack == 3){
-                nextPlayer();
-                getCurrentPlayer();
+                board.setMasterCardIdx(getCurrentPlayer().getId());
+                board.setCurrent_trump(callColor);
+                askPlayerToPlay(getCurrentPlayer());
+            }
+            else {
+                askPlayerToCall(getCurrentPlayer());
             }
         }
-        if (checkCall(tokens[0]) && checkColor(tokens[1])) {
-            getCurrentPlayer().sendMsg("Call accepted");
-            groupMsg("Player " + getCurrentPlayer().getId() + " called " + callValue + " " + callColor);
+        else {
+            try {
+                if (checkCall(tokens[0]) && checkCallColor(tokens[1])) {
+                    passStack = 0;
+                    getCurrentPlayer().sendMsg("Call accepted");
+                    groupMsg("Player " + getCurrentPlayer().getId() + " called " + callValue + " " + callColor);
+                    nextPlayer();
+                    askPlayerToCall(getCurrentPlayer());
+                } else {
+                    getCurrentPlayer().sendMsg("Wrong Call, try again");
+                }
+            } catch (Exception e) {
+                getCurrentPlayer().sendMsg("Wrong Call");
+            }
         }
     }
 
@@ -162,6 +200,7 @@ public class Game {
 
         if (isNumber(str) && (tmpCall = Integer.parseInt(str)) % 10 == 0 && tmpCall >= 80 && tmpCall <= 160 && tmpCall >= callValue) {
             passStack = 0;
+            System.out.println("le call est bon");
             callValue = Integer.parseInt(str);
             return true;
         }
@@ -172,15 +211,25 @@ public class Game {
         }
     }
 
+    public boolean checkColor(String str) {
+        if (str.equals("H") || str.equals("h") || str.equals("D") || str.equals("d") || str.equals("S") || str.equals("s") || str.equals("C") || str.equals("c")) {
+            System.out.println("bonne colour");
+            return true;
+        } else {
+            System.out.println("mauvaise colour");
+            return false;
+        }
+    }
+
     public boolean checkCallColor(String str){
-        if (str.equals("H"))
-            callColor = TRUMP_COLOUR.HEARTS;
-        else if (str.equals("D"))
-            callColor = TRUMP_COLOUR.DIAMONDS;
-        else if (str.equals("S"))
-            callColor = TRUMP_COLOUR.SPADES;
-        else if (str.equals("C"))
-            callColor = TRUMP_COLOUR.CLUBS;
+        if (str.equals("H") || str.equals("h"))
+            callColor = Card.COLOUR.HEARTS;
+        else if (str.equals("D") || str.equals("d"))
+            callColor = Card.COLOUR.DIAMONDS;
+        else if (str.equals("S") || str.equals("s"))
+            callColor = Card.COLOUR.SPADES;
+        else if (str.equals("C") || str.equals("c"))
+            callColor = Card.COLOUR.CLUBS;
         else
             return false;
         return true;
@@ -227,14 +276,17 @@ public class Game {
         for (int i = 0; i < 4; i++) {
             List<Card> cards = new ArrayList<Card>();
             for (int j = 0; j < 8; j++) {
-                my_players.get(i).addCard(Deck.get(j + (j * i)));
+                my_players.get(i).addCard(Deck.get(0));
+                Deck.remove(0);
             }
         }
     }
 
     public List<Player> getPlayers(){
         List<Player> players =  new ArrayList<Player>();
+        System.out.println("player");
         for (int i = 0; i < 2; i++){
+            System.out.println(teams[i].getPlayer(0));
             players.add(teams[i].getPlayer(0));
             players.add(teams[i].getPlayer(1));
         }

@@ -49,6 +49,28 @@ public class Player {
         channel.writeAndFlush(msg + "\n");
     }
 
+    public void showCards() {
+        Card tmpCard;
+        String str = "";
+        for (Card card : cards) {
+            str += card.getDisplay_string();
+            str += " ";
+        }
+        sendMsg(str);
+    }
+
+    public Card getCard(String cardName){
+        Card tmpCard;
+
+        for (Card card : cards){
+            if (card.getDisplay_string().equals(cardName)){
+                tmpCard = card;
+                return (tmpCard);
+            }
+        }
+        return null;
+    }
+
     public Card playCard(String cardName){
         Card tmpCard;
 
@@ -60,5 +82,16 @@ public class Player {
             }
         }
         return (null);
+    }
+
+    public List<Card> getPlayableCards(Card.COLOUR CurrentColour, List<Card> cardsonboard){
+        List<Card> playable_cards = new ArrayList<Card>();
+
+        for (Card card : cards){
+            if (card.getColour().equals(CurrentColour)){
+                playable_cards.add(card);
+            }
+        }
+        return playable_cards;
     }
 }

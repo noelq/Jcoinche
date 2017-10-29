@@ -6,7 +6,7 @@ public class Card {
     }
 
     COLOUR colour;
-    String display_string;
+    private String display_string;
     public int value;
 
 
@@ -27,4 +27,5 @@ public class Card {
     public COLOUR getColour() {
         return this.colour;
     }
+
 }
