@@ -32,4 +32,6 @@ public class Team {
     public void setNbPlayers(int nb){
         this.nbPlayers = nb;
     }
+
+
 }

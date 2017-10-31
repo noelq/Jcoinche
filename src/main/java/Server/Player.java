@@ -84,14 +84,4 @@ public class Player {
         return (null);
     }
 
-    public List<Card> getPlayableCards(Card.COLOUR CurrentColour, List<Card> cardsonboard){
-        List<Card> playable_cards = new ArrayList<Card>();
-
-        for (Card card : cards){
-            if (card.getColour().equals(CurrentColour)){
-                playable_cards.add(card);
-            }
-        }
-        return playable_cards;
-    }
 }

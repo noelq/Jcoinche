@@ -8,6 +8,7 @@ public class Board {
     List<Player> players = new ArrayList<Player>();
     int masterCardIdx;
     Card.COLOUR current_trump;
+    Card.COLOUR colour_set;
     int nb_cards = 0;
 
     public boolean putCard(String display_string, Player player){
@@ -16,33 +17,30 @@ public class Board {
              player.sendMsg("pas la carte");
              return false;
          }
-       /* else if (nb_cards == 0){
-            player.playCard(display_string);
+         if (nb_cards == 0){
+             player.playCard(display_string);
              cards.add(card_tmp);
              players.add(player);
-             return true;
-        }*/
+             masterCardIdx = nb_cards;
+             colour_set = card_tmp.getColour();
+             nb_cards += 1;
+         }
         else {
              List<Card> playable_cards;
-             playable_cards = player.getPlayableCards(current_trump, cards);
+             playable_cards = getPlayableCards(player);
              player.sendMsg("size " + playable_cards.size());
-             if (!(playable_cards = player.getPlayableCards(current_trump, cards)).isEmpty()) {
-                 player.sendMsg("le jouer a des cartes de bonne couleur");
-                 if (!playable_cards.contains(card_tmp)) {
-                     player.sendMsg("le joueur n'a pas joué la carte de bonne couleur");
-                     return false;
-                 }
+             System.out.println(playable_cards.get(0).getDisplay_string());
+             if (!playable_cards.contains(card_tmp)) {
+                 player.sendMsg("le joueur n'a pas joué la carte de bonne couleur");
+                 return false;
              }
              player.playCard(display_string);
              cards.add(card_tmp);
              players.add(player);
-             if (nb_cards == 0)
-                 masterCardIdx = player.getId();
-             else if (isBestCard(card_tmp))
-                 masterCardIdx = player.getId();
-             player.sendMsg("masterCardIdx : " + Integer.toString(masterCardIdx));
-             return true;
+             nb_cards += 1;
          }
+        masterCardIdx = getMasterPlayerIdx();
+        return true;
     }
 
     public boolean isBestCard(Card my_card){
@@ -57,8 +55,63 @@ public class Board {
         return true;
     }
 
+    private int getMasterPlayerIdx(){
+        int i = 0;
+        int value_max = 0;
+        int trump_value_max = 0;
+        int value_max_idx = 0;
+        int trump_value_max_idx = 0;
+        for (Card card_tmp : cards){
+            if (card_tmp.getColour().equals(current_trump)){
+                if (card_tmp.getTrump_value() > trump_value_max) {
+                    trump_value_max = card_tmp.getTrump_value();
+                    trump_value_max_idx = i;
+                }
+            }
+            else {
+                if (card_tmp.getValue() > value_max && card_tmp.getColour().equals(colour_set)){
+                    value_max = card_tmp.getValue();
+                    value_max_idx = i;
+                }
+            }
+            i++;
+        }
+        if (trump_value_max == 0)
+            return value_max_idx;
+        return trump_value_max_idx;
+    }
+
+    public List<Card> getPlayableCards(Player player){
+        List<Card> playable_cards = new ArrayList<Card>();
+        for (Card card : player.getCards()){
+            if (card.getColour().equals(colour_set)){
+                playable_cards.add(card);
+            }
+        }
+        if (playable_cards.isEmpty()) {
+            for (Card card : player.getCards()){
+                if (card.getColour().equals(current_trump))
+                    playable_cards.add(card);
+            }
+        }
+        if (playable_cards.isEmpty())
+            return player.getCards();
+        return playable_cards;
+    }
+
     public Card getMasterCard(){
         return cards.get(masterCardIdx);
+    }
+
+    public void countPoints(Team[] teams){
+        int points_earned = 0;
+        for (Card card : cards){
+            if (card.getColour().equals(current_trump))
+                points_earned += card.getTrump_value();
+            else
+                points_earned += card.getValue();
+        }
+        teams[players.get(masterCardIdx).getTeam_id()].addScore(points_earned);
     }
 
     public void setMasterCardIdx(int idx){
@@ -71,5 +124,15 @@ public class Board {
 
     public Card.COLOUR getCurrent_trump() {
         return current_trump;
+    }
+
+    public void cleanBoard(List<Card> Deck){
+        nb_cards = 0;
+        masterCardIdx = 0;
+        players.clear();
+        for (int i = 0; i < 4; i++){
+            Deck.add(cards.get(0));
+            cards.remove(0);
+        }
     }
 }

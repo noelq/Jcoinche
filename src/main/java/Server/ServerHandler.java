@@ -72,7 +72,9 @@ public class ServerHandler extends SimpleChannelInboundHandler<String> {
         Channel incoming = arg0.channel();
         System.out.println("on m'appelle");
 
-        if (game.getWait().ordinal() >= 0 && game.getCurrentPlayer().getChannel() == incoming){
+        if (message.equals("SHOW"))
+            game.getPlayerbyChannel(incoming).showCards();
+        else if (game.getWait().ordinal() >= 0 && game.getCurrentPlayer().getChannel() == incoming){
             game.scanMsg(message);
         }
         else {
@@ -85,5 +87,4 @@ public class ServerHandler extends SimpleChannelInboundHandler<String> {
         }*/
 
     }
-
 }

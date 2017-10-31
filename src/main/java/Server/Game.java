@@ -28,7 +28,7 @@ public class Game {
     private List<Player> players = new ArrayList<Player>();
 
     private int currentPlayerIdx = 0;
-    private int turnState = 1;
+    private int turnState = 0;
     private int nbCycle = 0;
     private int firstPlayerIdx = 0;
 
@@ -77,11 +77,16 @@ public class Game {
 
     public void setDeck() {
         for (int i = 0; i < 4; i++){
-            for (int j = 0; j < 8; j++){
-                //tmp_card = new Card(cards_name[j], Card.COLOUR.values()[i], 7 + j);
-                Deck.add(new Card(cards_name[j] + Card.COLOUR.values()[i].toString().charAt(0), Card.COLOUR.values()[i], 7 + j));
+                Deck.add(new Card(cards_name[0] + Card.COLOUR.values()[i].toString().charAt(0), Card.COLOUR.values()[i], 0, 0));
+                Deck.add(new Card(cards_name[1] + Card.COLOUR.values()[i].toString().charAt(0), Card.COLOUR.values()[i], 0, 0));
+                Deck.add(new Card(cards_name[2] + Card.COLOUR.values()[i].toString().charAt(0), Card.COLOUR.values()[i], 0, 14));
+                Deck.add(new Card(cards_name[3] + Card.COLOUR.values()[i].toString().charAt(0), Card.COLOUR.values()[i], 10, 10));
+                Deck.add(new Card(cards_name[4] + Card.COLOUR.values()[i].toString().charAt(0), Card.COLOUR.values()[i], 2, 20));
+                Deck.add(new Card(cards_name[5] + Card.COLOUR.values()[i].toString().charAt(0), Card.COLOUR.values()[i], 3, 3));
+                Deck.add(new Card(cards_name[6] + Card.COLOUR.values()[i].toString().charAt(0), Card.COLOUR.values()[i], 4, 4));
+                Deck.add(new Card(cards_name[7] + Card.COLOUR.values()[i].toString().charAt(0), Card.COLOUR.values()[i], 11, 11));
+
             }
-        }
         Collections.shuffle(Deck);
         for (int k = 0; k < 32; k++){
             System.out.print(Deck.get(k).getValue());
@@ -101,11 +106,16 @@ public class Game {
     }
 
     public void validateTurn(){
+        board.countPoints(teams);
+        groupMsg("Team 1 : " + teams[0].getScore() + " points  " + "Team 2 : " + teams[1].getScore() + "points");
+        board.cleanBoard(Deck);
+        turnState = 1;
         firstPlayerIdx++;
         if (firstPlayerIdx == 4)
             firstPlayerIdx = 0;
         currentPlayerIdx = firstPlayerIdx;
-
+        groupMsg("current player : " + currentPlayerIdx);
+        askPlayerToPlay(getCurrentPlayer());
     }
 
     public void scanMsg(String msg) {
@@ -115,44 +125,21 @@ public class Game {
             scanCall(msg);
         }
         else if (wait == WAIT_FOR.CARD){
-            if (msg.equals("SHOW")) {
-                getCurrentPlayer().showCards();
-                return;
-            }
             if (!board.putCard(msg, getCurrentPlayer())){
                 getCurrentPlayer().sendMsg("can't play this card");
                 return ;
             }
 
             groupMsg("Player " + getCurrentPlayer().getId() + " played " + msg);
-            nextPlayer();
-            askPlayerToPlay(getCurrentPlayer());
+            if (turnState < 4) {
+                nextPlayer();
+                askPlayerToPlay(getCurrentPlayer());
+            }
+            else
+                validateTurn();
 
            // scanCard(msg);
         }
-    }
-
-    public void scanCard(String msg){
-        Player player = getCurrentPlayer();
-        Card cardToplay;
-
-        if ((cardToplay = player.playCard(msg)) == null) {
-            player.sendMsg("You don't have this card or you used the wrong format");
-            return;
-        }
-        if (!isCardPlayable(cardToplay, player.getCards())){ //check couleur
-            player.sendMsg("You can't play this card");
-            return ;
-        }
-       /* if (!board.putCard(cardToplay, player)){
-            player.sendMsg("You can't play this card");
-            return ;
-        }*/
-        groupMsg("Player " + player.getId() + " played " + cardToplay.getDisplay_string());
-        if (turnState < 4)
-            nextPlayer();
-        else
-            validateTurn();
     }
 
     private boolean isCardPlayable(Card cardToPlay, List<Card> cards){
@@ -170,6 +157,7 @@ public class Game {
             groupMsg("Player " + getCurrentPlayer().getId() + " passed");
             nextPlayer();
             if (passStack == 3){
+                turnState = 1;
                 board.setMasterCardIdx(getCurrentPlayer().getId());
                 board.setCurrent_trump(callColor);
                 askPlayerToPlay(getCurrentPlayer());
@@ -305,9 +293,19 @@ public class Game {
 
     public void nextPlayer() {
         currentPlayerIdx++;
+        turnState++;
         if (currentPlayerIdx == 4){
             currentPlayerIdx = 0;
-            nbCycle++;
         }
+    }
+
+    public Player getPlayerbyChannel(Channel channel){
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 2; j++) {
+                if (teams[i].getPlayer(j).getChannel() == channel)
+                    return (teams[i].getPlayer(j));
+            }
+        }
+        return (null);
     }
 }

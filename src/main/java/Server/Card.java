@@ -8,9 +8,10 @@ public class Card {
     COLOUR colour;
     private String display_string;
     public int value;
+    public int trump_value;
 
 
-    public Card(String display_string, COLOUR colour, int value){
+    public Card(String display_string, COLOUR colour, int value, int trump_value){
         this.value = value;
         this.display_string = display_string;
         this.colour = colour;
@@ -28,4 +29,7 @@ public class Card {
         return this.colour;
     }
 
+    public int getTrump_value() {
+        return trump_value;
+    }
 }
