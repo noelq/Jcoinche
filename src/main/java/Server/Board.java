@@ -4,12 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Board {
-    List<Card> cards = new ArrayList<Card>();
-    List<Player> players = new ArrayList<Player>();
-    int masterCardIdx;
-    Card.COLOUR current_trump;
-    Card.COLOUR colour_set;
-    int nb_cards = 0;
+    private List<Card> cards = new ArrayList<Card>();
+    private List<Player> players = new ArrayList<Player>();
+    private int masterCardIdx;
+    private Card.COLOUR current_trump;
+    private Card.COLOUR colour_set;
+    private int nb_cards = 0;
 
     public boolean putCard(String display_string, Player player){
         Card card_tmp;
@@ -28,7 +28,6 @@ public class Board {
         else {
              List<Card> playable_cards;
              playable_cards = getPlayableCards(player);
-             player.sendMsg("size " + playable_cards.size());
              System.out.println(playable_cards.get(0).getDisplay_string());
              if (!playable_cards.contains(card_tmp)) {
                  player.sendMsg("le joueur n'a pas joué la carte de bonne couleur");
@@ -103,15 +102,17 @@ public class Board {
         return cards.get(masterCardIdx);
     }
 
-    public void countPoints(Team[] teams){
+    public void countPoints(Team[] teams, int nbTurns){
         int points_earned = 0;
+        if (nbTurns == 8)
+            points_earned = 10;
         for (Card card : cards){
             if (card.getColour().equals(current_trump))
                 points_earned += card.getTrump_value();
             else
                 points_earned += card.getValue();
         }
-        teams[players.get(masterCardIdx).getTeam_id()].addScore(points_earned);
+        teams[players.get(masterCardIdx).getTeam_id()].addRoundScore(points_earned);
     }
 
     public void setMasterCardIdx(int idx){

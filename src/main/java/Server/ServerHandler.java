@@ -21,7 +21,6 @@ public class ServerHandler extends SimpleChannelInboundHandler<String> {
     private static int player_cpt = 0;
 
     public ServerHandler() {
-        //player_cpt = 0;
         server_state = SERVER_STATE.WAIT;
     }
 
@@ -43,7 +42,6 @@ public class ServerHandler extends SimpleChannelInboundHandler<String> {
             player_tmp.setChannel(incoming);
             player_tmp.setId(player_cpt + 1);
             player_tmp.setTeam_id(player_cpt % 2);
-            System.out.println("player cpt: " + player_cpt);
             game.addPlayer(player_tmp);
             channels.add(ctx.channel());
             player_cpt += 1;
@@ -63,16 +61,13 @@ public class ServerHandler extends SimpleChannelInboundHandler<String> {
             channel.writeAndFlush(" [SERVER] - " + incoming.remoteAddress() + "has left!\n");
         }
         channels.remove(ctx.channel());
-        //player_cpt -= 1;
-
     }
 
 
     public void channelRead0(ChannelHandlerContext arg0, String message) throws Exception{
         Channel incoming = arg0.channel();
-        System.out.println("on m'appelle");
 
-        if (message.equals("SHOW"))
+        if (message.toLowerCase().equals("show"))
             game.getPlayerbyChannel(incoming).showCards();
         else if (game.getWait().ordinal() >= 0 && game.getCurrentPlayer().getChannel() == incoming){
             game.scanMsg(message);
@@ -80,11 +75,5 @@ public class ServerHandler extends SimpleChannelInboundHandler<String> {
         else {
             incoming.writeAndFlush("It is player " + game.getCurrentPlayer().getId() + "'s turn\n");
         }
-        /*for (Channel channel: channels) {
-            if (channel != incoming){
-                channel.writeAndFlush("[" + incoming.remoteAddress() + "]" + message + "\n");
-            }
-        }*/
-
     }
 }

@@ -20,6 +20,8 @@ public class Game {
     private String[] cards_name = {"7", "8", "9", "10","J", "Q", "K", "A"};
     private List<Card> Deck = new ArrayList<Card>();
 
+    private int callingTeam = -1;
+    private int defendingTeam = -1;
     private int callValue = -1;
     private Card.COLOUR callColor;
     private int passStack = 0;
@@ -29,7 +31,8 @@ public class Game {
 
     private int currentPlayerIdx = 0;
     private int turnState = 0;
-    private int nbCycle = 0;
+    private int nbTurns = 0;
+    private int nbRounds = 0;
     private int firstPlayerIdx = 0;
 
     private WAIT_FOR wait = WAIT_FOR.NOTHING;
@@ -38,19 +41,10 @@ public class Game {
         for (int i = 0; i < 2; i++){
             teams[i] = new Team();
         }
-        System.out.println("je suis passé");
         this.setDeck();
-
-        /*for (int i = 0; i < 2; i++){
-            System.out.println(teams[i].getPlayer(0).getId());
-            System.out.println(teams[i].getPlayer(0).getTeam_id());
-            System.out.println(teams[i].getPlayer(1).getId());
-            System.out.println(teams[i].getPlayer(1).getTeam_id());
-        }*/
     }
 
     public void start() {
-        System.out.println("La on start la game");
         players = getPlayers();
 
         board = new Board();
@@ -59,23 +53,20 @@ public class Game {
         players.get(1).showCards();
         players.get(2).showCards();
         players.get(3).showCards();
-        System.out.println("on va ask au player");
         this.askPlayerToCall(getCurrentPlayer());
     }
 
-    public void askPlayerToCall(Player player){
-        player.sendMsg("It is your turn to make a call");
-        System.out.println("je lui ai écrit");
+    private void askPlayerToCall(Player player){
+        player.sendMsg("It is your turn to make a call, [contract value] [trump color] (ex: 120 H)");
         wait = WAIT_FOR.CALL;
-        System.out.println("j'attend son call");
     }
 
-    public void askPlayerToPlay(Player player){
-        player.sendMsg("It is your turn to play");
+    private void askPlayerToPlay(Player player){
+        player.sendMsg("It is your turn to play a card, [card sign][card color] (ex: 10H)");
         wait = WAIT_FOR.CARD;
     }
 
-    public void setDeck() {
+    private void setDeck() {
         for (int i = 0; i < 4; i++){
                 Deck.add(new Card(cards_name[0] + Card.COLOUR.values()[i].toString().charAt(0), Card.COLOUR.values()[i], 0, 0));
                 Deck.add(new Card(cards_name[1] + Card.COLOUR.values()[i].toString().charAt(0), Card.COLOUR.values()[i], 0, 0));
@@ -88,11 +79,6 @@ public class Game {
 
             }
         Collections.shuffle(Deck);
-        for (int k = 0; k < 32; k++){
-            System.out.print(Deck.get(k).getValue());
-            System.out.print(Deck.get(k).getColour());
-            System.out.println(Deck.get(k).getDisplay_string());
-        }
     }
 
     public void addPlayer(Player player) {
@@ -105,59 +91,108 @@ public class Game {
         }
     }
 
-    public void validateTurn(){
-        board.countPoints(teams);
-        groupMsg("Team 1 : " + teams[0].getScore() + " points  " + "Team 2 : " + teams[1].getScore() + "points");
+    private void validateTurn(){
+        board.countPoints(teams, nbTurns);
+        groupMsg("Team 1 : " + teams[0].getRoundScore() + " points  " + "Team 2 : " + teams[1].getRoundScore() + "points");
         board.cleanBoard(Deck);
         turnState = 1;
+        nbTurns++;
         firstPlayerIdx++;
         if (firstPlayerIdx == 4)
             firstPlayerIdx = 0;
         currentPlayerIdx = firstPlayerIdx;
-        groupMsg("current player : " + currentPlayerIdx);
-        askPlayerToPlay(getCurrentPlayer());
+        if (nbTurns > 8)
+            validateRound();
+        else {
+            groupMsg("current player : " + (currentPlayerIdx + 1));
+            askPlayerToPlay(getCurrentPlayer());
+        }
+    }
+
+    private void validateRound(){
+        Team cTeam = teams[callingTeam];
+        Team dTeam = teams[defendingTeam];
+
+        if (cTeam.getRoundScore() >= cTeam.getContractValue()){
+            cTeam.addScore(cTeam.getRoundScore() + cTeam.getContractValue());
+            dTeam.addScore(dTeam.getRoundScore());
+            groupMsg("Team " + (callingTeam + 1) + " completed the contract and won " + cTeam.getScore() + " points.");
+            groupMsg("Team " + (defendingTeam + 1) + " failed to stop the other team and won " + dTeam.getScore() + " points.");
+        }
+        else {
+            dTeam.addScore(162 + cTeam.getContractValue());
+            groupMsg("Team " + (callingTeam + 1) + " prevented the other team from completing the contract and won " + dTeam.getScore() + " points");
+            groupMsg("Team " + (defendingTeam + 1) + " failed to complete the contract and won " + cTeam.getScore() + " points");
+        }
+        for (Team team : teams){
+            team.reset();
+        }
+        nbRounds++;
+        if (cTeam.getScore() >= 701 && dTeam.getScore() >= 701){
+            if (cTeam.getScore() == dTeam.getScore())
+                groupMsg("Draw with " + cTeam.getScore() + "points");
+            else if (cTeam.getScore() > dTeam.getScore())
+                groupMsg("Team " + callingTeam + " won the game with " + cTeam.getScore());
+            else
+                groupMsg("Team " + defendingTeam + " won the game with " + dTeam.getScore());
+            groupMsg("Reset the client to play another game");
+        }
+        else if (cTeam.getScore() >= 701){
+            groupMsg("Team " + callingTeam + " won the game with " + cTeam.getScore());
+            groupMsg("Reset the client to play another game");
+        }
+        else if (dTeam.getScore() >= 701){
+            groupMsg("Team " + defendingTeam + " won the game with " + dTeam.getScore());
+            groupMsg("Reset the client to play another game");
+        }
+        callingTeam = -1;
+        defendingTeam = -1;
+        callValue = -1;
+        passStack = 0;
+        currentPlayerIdx = 0;
+        turnState = 0;
+        nbTurns = 0;
+        firstPlayerIdx = 0;
+        wait = WAIT_FOR.NOTHING;
+        Collections.shuffle(Deck);
+        distribution();
+        askPlayerToCall(getCurrentPlayer());
     }
 
     public void scanMsg(String msg) {
-        System.out.println("Le bon joueur me parle");
-        System.out.println(msg);
         if (wait == WAIT_FOR.CALL) {
             scanCall(msg);
         }
         else if (wait == WAIT_FOR.CARD){
-            if (!board.putCard(msg, getCurrentPlayer())){
-                getCurrentPlayer().sendMsg("can't play this card");
-                return ;
-            }
-
-            groupMsg("Player " + getCurrentPlayer().getId() + " played " + msg);
-            if (turnState < 4) {
-                nextPlayer();
-                askPlayerToPlay(getCurrentPlayer());
-            }
-            else
-                validateTurn();
-
-           // scanCard(msg);
+            scanCard(msg);
         }
     }
 
-    private boolean isCardPlayable(Card cardToPlay, List<Card> cards){
-        if (cardToPlay.getValue() > board.getMasterCard().getValue()) {
-            return true;
+    private void scanCard(String msg){
+        if (!board.putCard(msg, getCurrentPlayer())){
+            getCurrentPlayer().sendMsg("You can't play this card");
+            return ;
         }
-        return false;
+
+        groupMsg("Player " + getCurrentPlayer().getId() + " played " + msg);
+        if (turnState < 4) {
+            nextPlayer();
+            askPlayerToPlay(getCurrentPlayer());
+        }
+        else
+            validateTurn();
     }
 
-    public void scanCall(String msg) {
+    private void scanCall(String msg) {
         String tokens[] = msg.split(" ");
 
         if (tokens[0].equals("pass")){
             passStack++;
             groupMsg("Player " + getCurrentPlayer().getId() + " passed");
             nextPlayer();
-            if (passStack == 3){
+            if (callValue != 0 && passStack == 3){
                 turnState = 1;
+                nbTurns = 1;
                 board.setMasterCardIdx(getCurrentPlayer().getId());
                 board.setCurrent_trump(callColor);
                 askPlayerToPlay(getCurrentPlayer());
@@ -172,9 +207,12 @@ public class Game {
                     passStack = 0;
                     getCurrentPlayer().sendMsg("Call accepted");
                     groupMsg("Player " + getCurrentPlayer().getId() + " called " + callValue + " " + callColor);
+                    callingTeam = getCurrentPlayer().getTeam_id();
+                    defendingTeam = (callingTeam + 1) % 2;
+                    teams[callingTeam].setContractValue(callValue);
                     nextPlayer();
-                    askPlayerToCall(getCurrentPlayer());
-                } else {
+                    askPlayerToCall(getCurrentPlayer()); }
+                else {
                     getCurrentPlayer().sendMsg("Wrong Call, try again");
                 }
             } catch (Exception e) {
@@ -183,33 +221,29 @@ public class Game {
         }
     }
 
-    public boolean checkCall(String str){
+    private boolean checkCall(String str){
         int tmpCall;
 
-        if (isNumber(str) && (tmpCall = Integer.parseInt(str)) % 10 == 0 && tmpCall >= 80 && tmpCall <= 160 && tmpCall >= callValue) {
+        if (isNumber(str) && (tmpCall = Integer.parseInt(str)) % 10 == 0 && tmpCall >= 80 && tmpCall <= 160 && tmpCall > callValue) {
             passStack = 0;
-            System.out.println("le call est bon");
             callValue = Integer.parseInt(str);
             return true;
         }
         else{
-            System.out.println("Wrong call");
             getCurrentPlayer().sendMsg("Wrong call, try again");
             return false;
         }
     }
 
-    public boolean checkColor(String str) {
+    private boolean checkColor(String str) {
         if (str.equals("H") || str.equals("h") || str.equals("D") || str.equals("d") || str.equals("S") || str.equals("s") || str.equals("C") || str.equals("c")) {
-            System.out.println("bonne colour");
             return true;
         } else {
-            System.out.println("mauvaise colour");
             return false;
         }
     }
 
-    public boolean checkCallColor(String str){
+    private boolean checkCallColor(String str){
         if (str.equals("H") || str.equals("h"))
             callColor = Card.COLOUR.HEARTS;
         else if (str.equals("D") || str.equals("d"))
@@ -223,7 +257,7 @@ public class Game {
         return true;
     }
 
-    public static boolean isNumber(String input){
+    private static boolean isNumber(String input){
         boolean parsable = true;
         try{
             Integer.parseInt(input);
@@ -237,19 +271,11 @@ public class Game {
         return (teams[idx]);
     }
 
-    /*public void setMsgAnswered(boolean msgAnswered){
-        this.msgAnswered = msgAnswered;
-    }*/
-
     public WAIT_FOR getWait() {
         return wait;
     }
 
-    /*public int getCurrentPlayerId(){
-        return (currentPlayerId);
-    }*/
-
-    public Player getPlayerById(int id) {
+    private Player getPlayerById(int id) {
         for (int i = 0; i < 2; i++) {
             for (int j = 0; j < 2; j++) {
                 if (teams[i].getPlayer(j).getId() == id)
@@ -259,7 +285,7 @@ public class Game {
         return (null);
     }
 
-    public void distribution() {
+    private void distribution() {
         List<Player> my_players = getPlayers();
         for (int i = 0; i < 4; i++) {
             List<Card> cards = new ArrayList<Card>();
@@ -270,18 +296,16 @@ public class Game {
         }
     }
 
-    public List<Player> getPlayers(){
+    private List<Player> getPlayers(){
         List<Player> players =  new ArrayList<Player>();
-        System.out.println("player");
         for (int i = 0; i < 2; i++){
-            System.out.println(teams[i].getPlayer(0));
             players.add(teams[i].getPlayer(0));
             players.add(teams[i].getPlayer(1));
         }
         return players;
     }
 
-    public void groupMsg(String msg){
+    private void groupMsg(String msg){
         for (Player player: getPlayers()) {
             player.getChannel().writeAndFlush(msg + "\n");
         }
@@ -291,7 +315,7 @@ public class Game {
         return (players.get(currentPlayerIdx));
     }
 
-    public void nextPlayer() {
+    private void nextPlayer() {
         currentPlayerIdx++;
         turnState++;
         if (currentPlayerIdx == 4){
